@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LIMS-Lab · API del sistema de gestión del laboratorio
 
-## Getting Started
+Backend del TFI de la Tecnicatura Universitaria en Programación (UTN-FRT). API REST hecha con [NestJS](https://nestjs.com) que atiende las peticiones del frontend del LIMS (Laboratory Information Management System).
 
-First, run the development server:
+> Estado: estructura inicial (TP 9). Los módulos tienen su CRUD generado pero todavía sin lógica de negocio ni conexión a la base de datos.
+
+## Requisitos
+
+- Node.js 20 o superior
+- npm
+- PostgreSQL (el esquema está en el repositorio [LIMS-laboratorio-db](https://github.com/axel674/LIMS-laboratorio-db))
+
+## Instalación
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env
+npm run start:dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+La API queda disponible en `http://localhost:4000/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables de entorno
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Descripción | Ejemplo |
+|---|---|---|
+| `PORT` | Puerto en el que escucha la API | `4000` |
+| `DATABASE_URL` | Cadena de conexión a PostgreSQL | `postgresql://usuario:password@localhost:5432/nombre_db` |
+| `API_BASE_URL` | URL base de la API | `http://localhost:4000/` |
 
-## Learn More
+El archivo `.env` no se versiona; usar `.env.example` como plantilla.
 
-To learn more about Next.js, take a look at the following resources:
+## Estructura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── main.ts
+└── modules/
+    ├── app/
+    ├── auth/
+    ├── pacientes/
+    ├── personal/
+    ├── sucursales/
+    ├── obras-sociales/
+    ├── medicos/
+    ├── turnos/
+    ├── ordenes/
+    ├── analisis/
+    ├── muestras/
+    ├── resultados/
+    ├── informes/
+    └── notificaciones/
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Cada módulo (salvo `app`) tiene `controller`, `service`, `module`, `dto/` y `entities/`, y corresponde a una entidad del esquema de la base de datos.
 
-## Deploy on Vercel
+## Endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Cada recurso expone el CRUD estándar bajo su propio prefijo. Ejemplo con `pacientes`:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Método | Ruta | Acción |
+|---|---|---|
+| `POST` | `/pacientes` | Crear |
+| `GET` | `/pacientes` | Listar |
+| `GET` | `/pacientes/:id` | Obtener uno |
+| `PATCH` | `/pacientes/:id` | Actualizar |
+| `DELETE` | `/pacientes/:id` | Eliminar |
+
+La documentación y las pruebas de los endpoints se organizan en una colección de Postman (pendiente de enlazar).
+
+## Scripts
+
+| Comando | Descripción |
+|---|---|
+| `npm run start:dev` | Levanta la API en modo desarrollo con recarga |
+| `npm run build` | Compila el proyecto |
+| `npm run start:prod` | Ejecuta la versión compilada |
+
+## Flujo de trabajo con Git
+
+- `main`: rama estable.
+- `dev`: rama de integración.
+- `feature/<nombre>`, `fix/<nombre>`, `refactor/<nombre>`, `docs/<nombre>`: ramas de trabajo que salen de `dev` y vuelven a `dev` mediante Pull Request.
