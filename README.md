@@ -66,7 +66,7 @@ Cada recurso expone el CRUD estándar bajo su propio prefijo. Ejemplo con `pacie
 | `PATCH` | `/pacientes/:id` | Actualizar |
 | `DELETE` | `/pacientes/:id` | Eliminar |
 
-La documentación y las pruebas de los endpoints se organizan en una colección de Postman (pendiente de enlazar).
+La colección de Postman con todos los endpoints está en [`docs/postman/LIMS-Lab.postman_collection.json`](docs/postman/LIMS-Lab.postman_collection.json). Para usarla: *Import* en Postman y, si hace falta, cambiar la variable `baseUrl`.
 
 ## Scripts
 
