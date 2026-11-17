@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoOrden } from '../../generated/prisma/client';
+import { EstadoOrden, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrdenDto } from './dto/create-orden.dto';
 import { UpdateOrdenDto } from './dto/update-orden.dto';
@@ -90,16 +90,19 @@ export class OrdenesService {
   }
 
   async actualizar(id: string, dto: UpdateOrdenDto) {
-    await this.obtener(id);
+    const orden = await this.obtener(id);
 
     if (dto.analisisIds !== undefined && dto.analisisIds.length === 0) {
       throw new BadRequestException('La orden necesita al menos un analisis');
     }
 
+    // Los analisis nuevos se validan antes de tocar nada
+    let analisis: { id: bigint; ub: Prisma.Decimal | null }[] | null = null;
     if (dto.analisisIds) {
       const ids = [...new Set(dto.analisisIds)];
-      const analisis = await this.prisma.analisis.findMany({
+      analisis = await this.prisma.analisis.findMany({
         where: { id: { in: ids.map((valor) => BigInt(valor)) } },
+        select: { id: true, ub: true },
       });
 
       if (analisis.length !== ids.length) {
@@ -107,36 +110,52 @@ export class OrdenesService {
           'Alguno de los analisis indicados no existe',
         );
       }
-
-      await this.prisma.ordenAnalisis.deleteMany({ where: { ordenId: id } });
-      await this.prisma.ordenAnalisis.createMany({
-        data: analisis.map((item) => ({
-          ordenId: id,
-          analisisId: item.id,
-          cubierto: true,
-          ub: item.ub,
-        })),
-      });
     }
 
+    // Misma regla que al crear: con obra social los estudios quedan cubiertos,
+    // sin obra social son particulares
+    const obraSocialId =
+      dto.obraSocialId === undefined
+        ? orden.obraSocialId
+        : dto.obraSocialId === null
+          ? null
+          : BigInt(dto.obraSocialId);
+    const cubierto = obraSocialId !== null;
     const anulada = dto.estado === EstadoOrden.anulada;
 
-    return this.prisma.orden.update({
-      where: { id },
-      data: {
-        obraSocialId:
-          dto.obraSocialId === undefined
-            ? undefined
-            : dto.obraSocialId === null
-              ? null
-              : BigInt(dto.obraSocialId),
-        fechaOrden: dto.fechaOrden ? new Date(dto.fechaOrden) : undefined,
-        observaciones: dto.observaciones,
-        estado: dto.estado,
-        motivoAnulacion: dto.motivoAnulacion,
-        anuladaEn: anulada ? new Date() : undefined,
-      },
-      include: INCLUDE_ORDEN,
+    // Todo en una transaccion: si algo falla, la orden queda como estaba
+    // (antes podia quedar sin estudios si fallaba la carga de los nuevos)
+    return this.prisma.$transaction(async (tx) => {
+      if (analisis) {
+        await tx.ordenAnalisis.deleteMany({ where: { ordenId: id } });
+        await tx.ordenAnalisis.createMany({
+          data: analisis.map((item) => ({
+            ordenId: id,
+            analisisId: item.id,
+            cubierto,
+            ub: item.ub,
+          })),
+        });
+      } else if (dto.obraSocialId !== undefined) {
+        // Cambio la obra social sin cambiar los estudios: se actualiza su cobertura
+        await tx.ordenAnalisis.updateMany({
+          where: { ordenId: id },
+          data: { cubierto },
+        });
+      }
+
+      return tx.orden.update({
+        where: { id },
+        data: {
+          obraSocialId: dto.obraSocialId === undefined ? undefined : obraSocialId,
+          fechaOrden: dto.fechaOrden ? new Date(dto.fechaOrden) : undefined,
+          observaciones: dto.observaciones,
+          estado: dto.estado,
+          motivoAnulacion: dto.motivoAnulacion,
+          anuladaEn: anulada ? new Date() : undefined,
+        },
+        include: INCLUDE_ORDEN,
+      });
     });
   }
 
@@ -149,14 +168,23 @@ export class OrdenesService {
   /**
    * Numero correlativo por anio, con el mismo formato que usa el LIMS
    * (S1-2026-000123), pero sin sucursal porque el TP no replica esa tabla.
+   *
+   * Se parte del numero mas alto del anio y no de la cantidad de ordenes:
+   * si se borra una orden, contar daria un numero que ya existe y la base
+   * rechazaria la orden nueva (nro_orden es unico).
    */
   private async generarNroOrden() {
     const anio = new Date().getFullYear();
     const prefijo = `ORD-${anio}-`;
-    const cantidad = await this.prisma.orden.count({
+    // El correlativo tiene 6 digitos con ceros a la izquierda, asi que el
+    // orden alfabetico coincide con el numerico
+    const ultima = await this.prisma.orden.findFirst({
       where: { nroOrden: { startsWith: prefijo } },
+      orderBy: { nroOrden: 'desc' },
+      select: { nroOrden: true },
     });
+    const siguiente = ultima ? Number(ultima.nroOrden.slice(prefijo.length)) + 1 : 1;
 
-    return `${prefijo}${String(cantidad + 1).padStart(6, '0')}`;
+    return `${prefijo}${String(siguiente).padStart(6, '0')}`;
   }
 }
