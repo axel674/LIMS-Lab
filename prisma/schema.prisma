@@ -1,0 +1,134 @@
+// Esquema del TP 9 / TP 10 / TP 11.
+//
+// Replica las tablas del LIMS que intervienen en el flujo
+// paciente -> orden -> analisis. La estructura y el catalogo salen del repo
+// axel674/LIMS-laboratorio-db (schema.sql y migrations/).
+//
+// Quedan afuera a proposito: auth/RLS y las tablas de personal (TP 12), y las
+// tablas de muestras, resultados, informes y cobros (fuera del alcance del TP).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Sexo {
+  F
+  M
+  X
+}
+
+enum EstadoOrden {
+  abierta
+  en_proceso
+  completa
+  informada
+  anulada
+}
+
+model ObraSocial {
+  id     BigInt  @id @default(autoincrement())
+  nombre String  @unique
+  codigo String? @unique
+  activa Boolean @default(true)
+
+  pacientes Paciente[]
+  ordenes   Orden[]
+
+  @@map("obras_sociales")
+}
+
+model TipoMuestra {
+  id     BigInt  @id @default(autoincrement())
+  nombre String  @unique
+  tubo   String?
+
+  analisis Analisis[]
+
+  @@map("tipos_muestra")
+}
+
+model Analisis {
+  id            BigInt   @id @default(autoincrement())
+  codigo        String   @unique
+  nombre        String
+  tipoMuestraId BigInt   @map("tipo_muestra_id")
+  unidad        String?
+  valorRefMin   Decimal? @map("valor_ref_min") @db.Decimal(12, 3)
+  valorRefMax   Decimal? @map("valor_ref_max") @db.Decimal(12, 3)
+  valorRefTexto String?  @map("valor_ref_texto")
+  diasDemora    Int?     @map("dias_demora")
+  activo        Boolean  @default(true)
+  ub            Decimal? @db.Decimal(10, 2)
+  codigoNbu     String?  @map("codigo_nbu")
+
+  tipoMuestra TipoMuestra     @relation(fields: [tipoMuestraId], references: [id])
+  ordenItems  OrdenAnalisis[]
+
+  @@index([tipoMuestraId])
+  @@map("analisis")
+}
+
+model Paciente {
+  id              String   @id @default(uuid()) @db.Uuid
+  dni             String   @unique @db.VarChar(10)
+  nombre          String
+  apellido        String
+  fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
+  sexo            Sexo?
+  telefono        String?
+  email           String?
+  domicilio       String?
+  obraSocialId    BigInt?  @map("obra_social_id")
+  nroAfiliado     String?  @map("nro_afiliado")
+  creadoEn        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  obraSocial ObraSocial? @relation(fields: [obraSocialId], references: [id])
+  ordenes    Orden[]
+
+  @@index([obraSocialId])
+  @@map("pacientes")
+}
+
+model Orden {
+  id              String      @id @default(uuid()) @db.Uuid
+  nroOrden        String      @unique @map("nro_orden")
+  pacienteId      String      @map("paciente_id") @db.Uuid
+  obraSocialId    BigInt?     @map("obra_social_id")
+  estado          EstadoOrden @default(abierta)
+  fechaOrden      DateTime    @map("fecha_orden") @db.Date
+  fechaRecepcion  DateTime    @default(now()) @map("fecha_recepcion") @db.Timestamptz(6)
+  observaciones   String?
+  motivoAnulacion String?     @map("motivo_anulacion")
+  anuladaEn       DateTime?   @map("anulada_en") @db.Timestamptz(6)
+
+  paciente   Paciente        @relation(fields: [pacienteId], references: [id])
+  obraSocial ObraSocial?     @relation(fields: [obraSocialId], references: [id])
+  items      OrdenAnalisis[]
+
+  @@index([pacienteId])
+  @@index([obraSocialId])
+  @@map("ordenes")
+}
+
+model OrdenAnalisis {
+  id                String   @id @default(uuid()) @db.Uuid
+  ordenId           String   @map("orden_id") @db.Uuid
+  analisisId        BigInt   @map("analisis_id")
+  cubierto          Boolean  @default(true)
+  ub                Decimal? @db.Decimal(10, 2)
+  valorUb           Decimal? @map("valor_ub") @db.Decimal(12, 2)
+  importeObraSocial Decimal? @map("importe_obra_social") @db.Decimal(12, 2)
+  importePaciente   Decimal? @map("importe_paciente") @db.Decimal(12, 2)
+
+  orden    Orden    @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  analisis Analisis @relation(fields: [analisisId], references: [id])
+
+  @@unique([ordenId, analisisId])
+  @@index([analisisId])
+  @@map("orden_analisis")
+}
