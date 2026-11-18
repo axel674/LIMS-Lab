@@ -1,0 +1,1220 @@
+{
+  "info": {
+    "name": "LIMS Lab API (TP 9, 10 y 11)",
+    "description": "Endpoints del backend NestJS + Prisma + PostgreSQL. Se puede correr completa con el Runner: crea registros de prueba, prueba las validaciones de los DTO (TP 10) y al final borra lo que creo.\n\nAntes: levantar la API (npm run start:dev) con la base cargada (npx prisma migrate dev y npm run prisma:seed).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/api"
+    },
+    {
+      "key": "pacienteId",
+      "value": ""
+    },
+    {
+      "key": "ordenId",
+      "value": ""
+    },
+    {
+      "key": "analisisId",
+      "value": ""
+    },
+    {
+      "key": "obraSocialId",
+      "value": ""
+    },
+    {
+      "key": "tipoMuestraId",
+      "value": ""
+    },
+    {
+      "key": "dniPrueba",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "App",
+      "item": [
+        {
+          "name": "Estado de la API",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Obras sociales",
+      "item": [
+        {
+          "name": "Listar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales",
+                "1"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"obraSocialId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Obra social de prueba {{$timestamp}}\",\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"activa\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear - invalido (TP 10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"\",\n  \"activa\": \"si\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales"
+              ]
+            },
+            "description": "Nombre vacio y activa distinto de true/false: tiene que responder 400."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activa\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales",
+                "{{obraSocialId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "obras-sociales",
+                "{{obraSocialId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tipos de muestra",
+      "item": [
+        {
+          "name": "Listar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra",
+                "1"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"tipoMuestraId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Hisopado {{$timestamp}}\",\n  \"tubo\": \"Tubo con medio de transporte\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear - invalido (TP 10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tubo\": 123\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra"
+              ]
+            },
+            "description": "Falta el nombre y tubo no es texto: tiene que responder 400."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tubo\": \"Tubo esteril\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra",
+                "{{tipoMuestraId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tipos-muestra",
+                "{{tipoMuestraId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analisis",
+      "item": [
+        {
+          "name": "Listar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analisis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analisis/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis",
+                "1"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"analisisId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"nombre\": \"Analisis de prueba\",\n  \"tipoMuestraId\": 2,\n  \"unidad\": \"mg/dL\",\n  \"valorRefMin\": 10,\n  \"valorRefMax\": 50,\n  \"diasDemora\": 1,\n  \"activo\": true,\n  \"ub\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analisis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear - invalido (TP 10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"minusculas\",\n  \"nombre\": \"Sin tipo de muestra\",\n  \"tipoMuestraId\": \"dos\",\n  \"activo\": \"si\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analisis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis"
+              ]
+            },
+            "description": "Codigo en minusculas, texto donde va un numero y activo distinto de true/false: tiene que responder 400."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"diasDemora\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/analisis/{{analisisId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis",
+                "{{analisisId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analisis/{{analisisId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "analisis",
+                "{{analisisId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pacientes",
+      "item": [
+        {
+          "name": "Listar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"dniPrueba\", String(Math.floor(30000000 + Math.random() * 9999999)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"pacienteId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Paciente\",\n  \"apellido\": \"De Prueba\",\n  \"fechaNacimiento\": \"1990-05-20\",\n  \"sexo\": \"F\",\n  \"telefono\": \"3815550000\",\n  \"email\": \"paciente.prueba@example.com\",\n  \"obraSocialId\": 1,\n  \"nroAfiliado\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacienteId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear - invalido (TP 10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"abc\",\n  \"nombre\": \"\",\n  \"fechaNacimiento\": \"20/05/1990\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "DNI con letras, nombre vacio, falta el apellido y la fecha tiene otro formato: tiene que responder 400."
+          }
+        },
+        {
+          "name": "Crear - DNI repetido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Otro\",\n  \"apellido\": \"Paciente\",\n  \"fechaNacimiento\": \"1990-05-20\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pacientes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes"
+              ]
+            },
+            "description": "Mismo DNI que el paciente creado antes: tiene que responder 409."
+          }
+        },
+        {
+          "name": "Actualizar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"3815551111\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacienteId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ordenes",
+      "item": [
+        {
+          "name": "Listar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ordenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Listar por estado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ordenes?estado=abierta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "abierta"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"ordenId\", pm.response.json().id);",
+                  "pm.test(\"Tiene numero de orden\", () => pm.expect(pm.response.json().nroOrden).to.match(/^ORD-\\d{4}-\\d{6}$/));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"{{pacienteId}}\",\n  \"fechaOrden\": \"2026-11-17\",\n  \"observaciones\": \"Orden creada desde Postman\",\n  \"analisisIds\": [\n    1,\n    2,\n    3\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ordenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Obtener por id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes",
+                "{{ordenId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Crear - invalido (TP 10)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pacienteId\": \"no-es-uuid\",\n  \"analisisIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ordenes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes"
+              ]
+            },
+            "description": "pacienteId que no es UUID y sin analisis: tiene que responder 400."
+          }
+        },
+        {
+          "name": "Actualizar estudios",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Quedan 2 estudios\", () => pm.expect(pm.response.json().items.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"analisisIds\": [\n    4,\n    5\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes",
+                "{{ordenId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Anular",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"anulada\",\n  \"motivoAnulacion\": \"Prueba desde Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes",
+                "{{ordenId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Eliminar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ordenes",
+                "{{ordenId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Limpieza",
+      "item": [
+        {
+          "name": "Eliminar el paciente de prueba",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pacientes",
+                "{{pacienteId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,36 +1,119 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LIMS Lab — Backend NestJS + Prisma + PostgreSQL
 
-## Getting Started
+Backend de los **TP 9, TP 10 y TP 11** (UTN-FRT): API REST con NestJS, validación de DTOs y
+persistencia en PostgreSQL a través de Prisma 7.
 
-First, run the development server:
+Replica las tablas del sistema LIMS que intervienen en el flujo
+**paciente → orden → análisis**, tomadas de `axel674/LIMS-laboratorio-db`.
+
+## Stack
+
+| Pieza | Versión |
+|---|---|
+| NestJS | 12 |
+| Prisma | 7 (`prisma-client` + `@prisma/adapter-pg`) |
+| PostgreSQL | 17 |
+| Validación | `class-validator` + `class-transformer` (`ValidationPipe` global) |
+| Puerto | `4000` (`PORT` en `.env`) |
+
+## Puesta en marcha
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install                 # instala y genera el cliente de Prisma (postinstall)
+cp .env.example .env        # completar DATABASE_URL y credenciales
+npx prisma migrate dev --name init
+npm run prisma:seed         # carga catálogos + datos de ejemplo
+npm run start:dev           # http://localhost:4000/api
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+DATABASE_URL="postgresql://postgres:TU_PASSWORD@localhost:5432/lims_lab?schema=public"
+PORT=4000
+API_BASE_URL="http://localhost:4000/api"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estructura
 
-## Learn More
+```
+src/
+  main.ts                      # ValidationPipe global + puerto 4000
+  modules/
+    app/                       # módulo raíz (app.module.ts, controller y service)
+    prisma/                    # PrismaService + PrismaModule (global)
+    pacientes/                 # controller, service, dto/
+    analisis/
+    ordenes/
+    tipos-muestra/
+    obras-sociales/
+prisma/
+  schema.prisma                # 6 tablas con PK, FK y restricciones
+  seed.ts                      # catálogos reales + datos de ejemplo
+```
 
-To learn more about Next.js, take a look at the following resources:
+Cada módulo tiene su `Create<Entidad>Dto` y `Update<Entidad>Dto`; el controller sólo recibe
+el body/param validado y delega en el service, que es el único que habla con Prisma.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Endpoints
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Todos cuelgan de `/api`. Cada recurso tiene listar, obtener, crear, actualizar y eliminar.
 
-## Deploy on Vercel
+| Recurso | Ruta |
+|---|---|
+| Info del servicio | `GET /api` |
+| Pacientes | `/api/pacientes` |
+| Análisis | `/api/analisis` |
+| Órdenes | `/api/ordenes` |
+| Tipos de muestra | `/api/tipos-muestra` |
+| Obras sociales | `/api/obras-sociales` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`GET /api/ordenes` acepta `?estado=abierta&pacienteId=<uuid>`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Pruebas con Postman
+
+La colección está en `postman/LIMS-Lab.postman_collection.json` (Postman → Import). Tiene 34 requests en carpetas por módulo: listar, obtener, crear, actualizar y eliminar, más un **"Crear - inválido (TP 10)"** por módulo que manda datos incorrectos (campo obligatorio vacío, texto donde va un número, `activa`/`activo` distinto de true/false) y espera un 400 con los mensajes de validación.
+
+Con la API levantada y el seed cargado, se corre completa desde el **Runner**: los registros que crea los borra al final. La variable `baseUrl` de la colección apunta a `http://localhost:4000/api`.
+
+### Ejemplo: crear una orden
+
+```bash
+POST /api/ordenes
+{
+  "pacienteId": "3f3c0d4e-...",
+  "analisisIds": [1, 5, 7],
+  "observaciones": "Perfil renal"
+}
+```
+
+El número de orden se genera solo (`ORD-2026-000007`). Si el paciente tiene obra social,
+los ítems quedan cubiertos; si no, particulares.
+
+## Modelo de datos
+
+| Tabla | Claves |
+|---|---|
+| `pacientes` | PK `id` (uuid), `dni` único, FK `obra_social_id` |
+| `obras_sociales` | PK `id`, `nombre` único |
+| `tipos_muestra` | PK `id`, `nombre` único |
+| `analisis` | PK `id`, `codigo` único, FK `tipo_muestra_id` |
+| `ordenes` | PK `id` (uuid), `nro_orden` único, FK `paciente_id`, FK `obra_social_id` |
+| `orden_analisis` | PK `id` (uuid), FK `orden_id` (cascade), FK `analisis_id`, único (`orden_id`, `analisis_id`) |
+
+Enums: `sexo` (`F`, `M`, `X`) y `estado_orden` (`abierta`, `en_proceso`, `completa`,
+`informada`, `anulada`).
+
+## Origen de los datos del seed
+
+- **Catálogos reales** del LIMS (tipos de muestra, obras sociales y los 13 análisis con
+  unidad, rango y días de demora): migraciones `20261021_01_catalogo_analisis.sql` y
+  `20261022_01_fila_atencion.sql` de `axel674/LIMS-laboratorio-db`.
+- **Pacientes y órdenes de ejemplo**: el LIMS no versiona sus filas de pacientes, así que el
+  seed las arma con ese catálogo (5 pacientes, 6 órdenes, 12 ítems). El seed reinicia esas
+  dos tablas cada vez que se corre; los catálogos se actualizan sin duplicar.
+
+## Fuera de alcance
+
+- `auth` y `perfiles`/`personal`: corresponden al TP 12.
+- RLS, muestras, resultados, informes y cobros: son del proyecto LIMS React + Supabase.
