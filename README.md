@@ -70,6 +70,12 @@ Todos cuelgan de `/api`. Cada recurso tiene listar, obtener, crear, actualizar y
 
 `GET /api/ordenes` acepta `?estado=abierta&pacienteId=<uuid>`.
 
+### Pruebas con Postman
+
+La colección está en `postman/LIMS-Lab.postman_collection.json` (Postman → Import). Tiene 34 requests en carpetas por módulo: listar, obtener, crear, actualizar y eliminar, más un **"Crear - inválido (TP 10)"** por módulo que manda datos incorrectos (campo obligatorio vacío, texto donde va un número, `activa`/`activo` distinto de true/false) y espera un 400 con los mensajes de validación.
+
+Con la API levantada y el seed cargado, se corre completa desde el **Runner**: los registros que crea los borra al final. La variable `baseUrl` de la colección apunta a `http://localhost:4000/api`.
+
 ### Ejemplo: crear una orden
 
 ```bash
