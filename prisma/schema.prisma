@@ -1,11 +1,12 @@
-// Esquema del TP 9 / TP 10 / TP 11.
+// Esquema del TP 9 / TP 10 / TP 11 / TP 12.
 //
 // Replica las tablas del LIMS que intervienen en el flujo
 // paciente -> orden -> analisis. La estructura y el catalogo salen del repo
 // axel674/LIMS-laboratorio-db (schema.sql y migrations/).
 //
-// Quedan afuera a proposito: auth/RLS y las tablas de personal (TP 12), y las
-// tablas de muestras, resultados, informes y cobros (fuera del alcance del TP).
+// TP 12: se suma la tabla usuarios para el registro y el login con JWT.
+// Quedan afuera a proposito RLS y las tablas de muestras, resultados, informes
+// y cobros (fuera del alcance del TP).
 
 generator client {
   provider = "prisma-client"
@@ -20,6 +21,14 @@ enum Sexo {
   F
   M
   X
+}
+
+// Roles del personal del LIMS (rol_usuario en axel674/LIMS-laboratorio-db)
+enum RolUsuario {
+  admin
+  bioquimico
+  tecnico
+  recepcion
 }
 
 enum EstadoOrden {
@@ -131,4 +140,19 @@ model OrdenAnalisis {
   @@unique([ordenId, analisisId])
   @@index([analisisId])
   @@map("orden_analisis")
+}
+
+// Usuarios del sistema (TP 12). Se registran y entran con email y contrasena;
+// la contrasena se guarda solo como hash de bcrypt, nunca en texto plano.
+model Usuario {
+  id           String     @id @default(uuid()) @db.Uuid
+  nombre       String
+  apellido     String
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  rol          RolUsuario @default(recepcion)
+  activo       Boolean    @default(true)
+  creadoEn     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("usuarios")
 }

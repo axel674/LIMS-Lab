@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "LIMS Lab API (TP 9, 10 y 11)",
+    "name": "LIMS Lab API (TP 9, 10, 11 y 12)",
     "description": "Endpoints del backend NestJS + Prisma + PostgreSQL. Se puede correr completa con el Runner: crea registros de prueba, prueba las validaciones de los DTO (TP 10) y al final borra lo que creo.\n\nAntes: levantar la API (npm run start:dev) con la base cargada (npx prisma migrate dev y npm run prisma:seed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -32,6 +32,22 @@
     {
       "key": "dniPrueba",
       "value": ""
+    },
+    {
+      "key": "emailPrueba",
+      "value": ""
+    },
+    {
+      "key": "passwordPrueba",
+      "value": ""
+    },
+    {
+      "key": "usuarioId",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
     }
   ],
   "item": [
@@ -60,6 +76,276 @@
                 "{{baseUrl}}"
               ],
               "path": []
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth (TP 12)",
+      "description": "Registro e inicio de sesion con JWT. Cada corrida registra un usuario con un email nuevo (no hay ruta para borrar usuarios: quedan en la base de prueba). El login guarda el token en la variable token.",
+      "item": [
+        {
+          "name": "Registrar",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Email nuevo en cada corrida, para que el registro no choque con uno anterior",
+                  "pm.collectionVariables.set(\"emailPrueba\", `prueba.${Date.now()}@example.com`);",
+                  "pm.collectionVariables.set(\"passwordPrueba\", \"Prueba1234\");"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                  "const usuario = pm.response.json();",
+                  "pm.test(\"Devuelve el usuario sin la contrasena\", () => {",
+                  "  pm.expect(usuario.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
+                  "  pm.expect(usuario).to.not.have.property(\"password\");",
+                  "  pm.expect(usuario).to.not.have.property(\"passwordHash\");",
+                  "});",
+                  "pm.test(\"Queda con rol recepcion\", () => pm.expect(usuario.rol).to.eql(\"recepcion\"));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set(\"usuarioId\", usuario.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Registrar - email repetido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Registrar - invalido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Explica cada campo invalido\", () => {",
+                  "  const mensajes = pm.response.json().message.join(\" \");",
+                  "  pm.expect(mensajes).to.include(\"email\");",
+                  "  pm.expect(mensajes).to.include(\"password\");",
+                  "  pm.expect(mensajes).to.include(\"nombre\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                  "const datos = pm.response.json();",
+                  "pm.test(\"Devuelve un JWT\", () => pm.expect(datos.access_token.split(\".\")).to.have.lengthOf(3));",
+                  "pm.test(\"El token es del usuario que entro\", () => {",
+                  "  const parte = datos.access_token.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\");",
+                  "  const payload = JSON.parse(CryptoJS.enc.Base64.parse(parte).toString(CryptoJS.enc.Utf8));",
+                  "  pm.expect(payload.sub).to.eql(pm.collectionVariables.get(\"usuarioId\"));",
+                  "  pm.expect(payload.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
+                  "});",
+                  "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", datos.access_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Login - contrasena incorrecta",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"No devuelve token\", () => pm.expect(pm.response.json()).to.not.have.property(\"access_token\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"otraContrasena\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Login - email no registrado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Mismo mensaje que con la contrasena incorrecta\", () => pm.expect(pm.response.json().message).to.eql(\"Email o contrasena incorrectos\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nadie.registrado@example.com\",\n  \"password\": \"Prueba1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
             },
             "description": ""
           }
