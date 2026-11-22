@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePacienteDto } from './dto/create-paciente.dto';
 import { UpdatePacienteDto } from './dto/update-paciente.dto';
@@ -57,7 +58,7 @@ export class PacientesService {
         include: { obraSocial: true },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(`Ya existe un paciente con el DNI ${dto.dni}`);
       }
       throw error;
@@ -67,6 +68,14 @@ export class PacientesService {
   async actualizar(id: string, dto: UpdatePacienteDto) {
     await this.obtener(id);
     await this.verificarObraSocial(dto.obraSocialId);
+
+    // Si no viene obraSocialId no se cambia; si viene null se le quita la obra social
+    let obraSocialId: bigint | null | undefined;
+    if (dto.obraSocialId === null) {
+      obraSocialId = null;
+    } else if (dto.obraSocialId !== undefined) {
+      obraSocialId = BigInt(dto.obraSocialId);
+    }
 
     try {
       return await this.prisma.paciente.update({
@@ -82,18 +91,13 @@ export class PacientesService {
           telefono: dto.telefono,
           email: dto.email,
           domicilio: dto.domicilio,
-          obraSocialId:
-            dto.obraSocialId === undefined
-              ? undefined
-              : dto.obraSocialId === null
-                ? null
-                : BigInt(dto.obraSocialId),
+          obraSocialId,
           nroAfiliado: dto.nroAfiliado,
         },
         include: { obraSocial: true },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(`Ya existe un paciente con el DNI ${dto.dni}`);
       }
       throw error;
@@ -107,7 +111,7 @@ export class PacientesService {
       await this.prisma.paciente.delete({ where: { id } });
       return { eliminado: true, id };
     } catch (error) {
-      if (this.esError(error, 'P2003')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new ConflictException(
           'El paciente tiene ordenes asociadas: no se puede eliminar',
         );
@@ -130,14 +134,5 @@ export class PacientesService {
         `No existe la obra social con id ${obraSocialId}`,
       );
     }
-  }
-
-  private esError(error: unknown, codigo: string) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: string }).code === codigo
-    );
   }
 }

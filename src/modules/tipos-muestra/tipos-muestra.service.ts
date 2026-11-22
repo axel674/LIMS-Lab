@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTipoMuestraDto } from './dto/create-tipo-muestra.dto';
 import { UpdateTipoMuestraDto } from './dto/update-tipo-muestra.dto';
@@ -34,7 +35,7 @@ export class TiposMuestraService {
         data: { nombre: dto.nombre, tubo: dto.tubo },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(
           `Ya existe el tipo de muestra ${dto.nombre}`,
         );
@@ -58,21 +59,12 @@ export class TiposMuestraService {
       await this.prisma.tipoMuestra.delete({ where: { id: BigInt(id) } });
       return { eliminado: true, id };
     } catch (error) {
-      if (this.esError(error, 'P2003')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new ConflictException(
           'Hay analisis que usan este tipo de muestra: no se puede eliminar',
         );
       }
       throw error;
     }
-  }
-
-  private esError(error: unknown, codigo: string) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: string }).code === codigo
-    );
   }
 }

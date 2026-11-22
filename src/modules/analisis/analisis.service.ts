@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAnalisisDto } from './dto/create-analisis.dto';
 import { UpdateAnalisisDto } from './dto/update-analisis.dto';
@@ -52,7 +53,7 @@ export class AnalisisService {
         include: { tipoMuestra: true },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(
           `Ya existe un analisis con el codigo ${dto.codigo}`,
         );
@@ -87,7 +88,7 @@ export class AnalisisService {
         include: { tipoMuestra: true },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(
           `Ya existe un analisis con el codigo ${dto.codigo}`,
         );
@@ -103,7 +104,7 @@ export class AnalisisService {
       await this.prisma.analisis.delete({ where: { id: BigInt(id) } });
       return { eliminado: true, id };
     } catch (error) {
-      if (this.esError(error, 'P2003')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new ConflictException(
           'El analisis esta incluido en ordenes: conviene desactivarlo en lugar de eliminarlo',
         );
@@ -126,14 +127,5 @@ export class AnalisisService {
         `No existe el tipo de muestra con id ${tipoMuestraId}`,
       );
     }
-  }
-
-  private esError(error: unknown, codigo: string) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: string }).code === codigo
-    );
   }
 }
