@@ -1,4 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Datos para crear un usuario: la contrasena ya llega hasheada desde AuthService
@@ -40,19 +41,10 @@ export class UsersService {
         select: CAMPOS_PUBLICOS,
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(`Ya existe un usuario con el email ${datos.email}`);
       }
       throw error;
     }
-  }
-
-  private esError(error: unknown, codigo: string) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: string }).code === codigo
-    );
   }
 }

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObraSocialDto } from './dto/create-obra-social.dto';
 import { UpdateObraSocialDto } from './dto/update-obra-social.dto';
@@ -38,7 +39,7 @@ export class ObrasSocialesService {
         },
       });
     } catch (error) {
-      if (this.esError(error, 'P2002')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(`Ya existe la obra social ${dto.nombre}`);
       }
       throw error;
@@ -60,21 +61,12 @@ export class ObrasSocialesService {
       await this.prisma.obraSocial.delete({ where: { id: BigInt(id) } });
       return { eliminado: true, id };
     } catch (error) {
-      if (this.esError(error, 'P2003')) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
         throw new ConflictException(
           'Hay pacientes u ordenes con esta obra social: conviene desactivarla',
         );
       }
       throw error;
     }
-  }
-
-  private esError(error: unknown, codigo: string) {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: string }).code === codigo
-    );
   }
 }

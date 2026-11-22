@@ -114,12 +114,13 @@ export class OrdenesService {
 
     // Misma regla que al crear: con obra social los estudios quedan cubiertos,
     // sin obra social son particulares
-    const obraSocialId =
-      dto.obraSocialId === undefined
-        ? orden.obraSocialId
-        : dto.obraSocialId === null
-          ? null
-          : BigInt(dto.obraSocialId);
+    // Si no viene obraSocialId se mantiene la que tenia la orden
+    let obraSocialId = orden.obraSocialId;
+    if (dto.obraSocialId === null) {
+      obraSocialId = null;
+    } else if (dto.obraSocialId !== undefined) {
+      obraSocialId = BigInt(dto.obraSocialId);
+    }
     const cubierto = obraSocialId !== null;
     const anulada = dto.estado === EstadoOrden.anulada;
 
@@ -147,7 +148,7 @@ export class OrdenesService {
       return tx.orden.update({
         where: { id },
         data: {
-          obraSocialId: dto.obraSocialId === undefined ? undefined : obraSocialId,
+          obraSocialId,
           fechaOrden: dto.fechaOrden ? new Date(dto.fechaOrden) : undefined,
           observaciones: dto.observaciones,
           estado: dto.estado,
