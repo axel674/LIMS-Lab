@@ -102,6 +102,16 @@ POST /api/auth/login
 - El token lleva `sub` (id del usuario), `email` y `rol`, y vence según `JWT_EXPIRES_IN`.
 - Todo usuario nuevo queda con rol `recepcion`: nadie puede registrarse a sí mismo como `admin`.
 
+**Usuarios de prueba** (los carga `npm run prisma:seed`, contraseña `Prueba1234` para todos):
+
+| Email | Rol |
+| --- | --- |
+| `admin@lims.test` | admin |
+| `bioquimico@lims.test` | bioquimico |
+| `tecnico@lims.test` | tecnico |
+| `recepcion@lims.test` | recepcion |
+| `inactivo@lims.test` | recepcion, **inactivo** (el login responde 401) |
+
 ### Pruebas con Postman
 
 La colección está en `postman/LIMS-Lab.postman_collection.json` (Postman → Import). Tiene 40 requests en carpetas por módulo: listar, obtener, crear, actualizar y eliminar, más un **"Crear - inválido (TP 10)"** por módulo que manda datos incorrectos (campo obligatorio vacío, texto donde va un número, `activa`/`activo` distinto de true/false) y espera un 400 con los mensajes de validación.

@@ -1,5 +1,5 @@
 /**
- * Seed del TP 9/10/11.
+ * Seed del TP 9/10/11/12.
  *
  * Los catalogos (tipos de muestra, obras sociales y analisis) son los datos
  * reales del LIMS: salen de axel674/LIMS-laboratorio-db, migraciones
@@ -10,10 +10,15 @@
  *
  * Uso: npm run prisma:seed
  * Ojo: el seed reinicia pacientes y ordenes (no toca los catalogos).
+ *
+ * TP 12: carga 5 usuarios de prueba (uno por rol y uno inactivo), todos con la
+ * contrasena PASSWORD_USUARIOS_PRUEBA, guardada como hash de bcrypt. Los usuarios
+ * que se registren con /api/auth/register no se borran.
  */
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../src/generated/prisma/client';
+import * as bcrypt from 'bcrypt';
+import { PrismaClient, RolUsuario } from '../src/generated/prisma/client';
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
@@ -164,6 +169,18 @@ const ordenes = [
   },
 ];
 
+// Contrasena de los usuarios de prueba (solo para desarrollo y la demo)
+const PASSWORD_USUARIOS_PRUEBA = 'Prueba1234';
+
+const usuarios: { nombre: string; apellido: string; email: string; rol: RolUsuario; activo: boolean }[] = [
+  { nombre: 'Laura', apellido: 'Medina', email: 'admin@lims.test', rol: 'admin', activo: true },
+  { nombre: 'Carlos', apellido: 'Ruiz', email: 'bioquimico@lims.test', rol: 'bioquimico', activo: true },
+  { nombre: 'Sofia', apellido: 'Paz', email: 'tecnico@lims.test', rol: 'tecnico', activo: true },
+  { nombre: 'Martin', apellido: 'Lopez', email: 'recepcion@lims.test', rol: 'recepcion', activo: true },
+  // Inactivo: sirve para mostrar que el login lo rechaza con 401
+  { nombre: 'Julia', apellido: 'Sosa', email: 'inactivo@lims.test', rol: 'recepcion', activo: false },
+];
+
 async function main() {
   console.log('Cargando catálogos...');
 
@@ -292,6 +309,16 @@ async function main() {
     });
   }
 
+  console.log('Cargando usuarios de prueba...');
+  const passwordHash = await bcrypt.hash(PASSWORD_USUARIOS_PRUEBA, 10);
+  for (const usuario of usuarios) {
+    await prisma.usuario.upsert({
+      where: { email: usuario.email },
+      update: { ...usuario, passwordHash },
+      create: { ...usuario, passwordHash },
+    });
+  }
+
   const resumen = {
     tiposMuestra: await prisma.tipoMuestra.count(),
     obrasSociales: await prisma.obraSocial.count(),
@@ -299,6 +326,7 @@ async function main() {
     pacientes: await prisma.paciente.count(),
     ordenes: await prisma.orden.count(),
     ordenAnalisis: await prisma.ordenAnalisis.count(),
+    usuarios: await prisma.usuario.count(),
   };
 
   console.table(resumen);
