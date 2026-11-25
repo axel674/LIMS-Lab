@@ -114,9 +114,25 @@ POST /api/auth/login
 
 ### Pruebas con Postman
 
-La colección está en `postman/LIMS-Lab.postman_collection.json` (Postman → Import). Tiene 40 requests en carpetas por módulo: listar, obtener, crear, actualizar y eliminar, más un **"Crear - inválido (TP 10)"** por módulo que manda datos incorrectos (campo obligatorio vacío, texto donde va un número, `activa`/`activo` distinto de true/false) y espera un 400 con los mensajes de validación.
+La colección está en `postman/LIMS-Lab.postman_collection.json` (Postman → Import). Tiene 40 requests en carpetas numeradas por módulo, en el orden en que se corren:
 
-La carpeta **"Auth (TP 12)"** registra un usuario con un email nuevo en cada corrida, prueba el email repetido (409) y los datos inválidos (400), inicia sesión y guarda el token en la variable `token`, y prueba el login con contraseña incorrecta y con un email no registrado (401). Como no hay ruta para borrar usuarios, los de prueba quedan en la base.
+```
+00 · Estado de la API
+01 · Autenticación
+02 · Obras sociales
+03 · Tipos de muestra
+04 · Análisis
+05 · Pacientes
+06 · Órdenes
+99 · Limpieza
+```
+
+Cada módulo tiene dos subcarpetas, y el nombre de cada request indica el código de estado que espera (por ejemplo, `Crear paciente → 201`):
+
+- **Casos correctos**: listar, obtener, crear, actualizar y eliminar.
+- **Casos de error**: un **"Crear con datos inválidos → 400"** por módulo, que manda datos incorrectos (campo obligatorio vacío, texto donde va un número, `activa`/`activo` distinto de true/false) y espera los mensajes de validación, más los conflictos (DNI o email repetido, 409) y los logins rechazados (401).
+
+La carpeta **"01 · Autenticación"** registra un usuario con un email nuevo en cada corrida, prueba el email repetido (409) y los datos inválidos (400), inicia sesión y guarda el token en la variable `token`, y prueba el login con contraseña incorrecta y con un email no registrado (401). Como no hay ruta para borrar usuarios, los de prueba quedan en la base.
 
 Con la API levantada y el seed cargado, se corre completa desde el **Runner**: los registros que crea los borra al final. La variable `baseUrl` de la colección apunta a `http://localhost:4000/api`.
 
