@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "LIMS Lab API (TP 9, 10, 11 y 12)",
-    "description": "Endpoints del backend NestJS + Prisma + PostgreSQL. Se puede correr completa con el Runner: crea registros de prueba, prueba las validaciones de los DTO (TP 10) y al final borra lo que creo.\n\nAntes: levantar la API (npm run start:dev) con la base cargada (npx prisma migrate dev y npm run prisma:seed).",
+    "name": "LIMS Lab API",
+    "description": "Endpoints del backend NestJS + Prisma + PostgreSQL, en carpetas numeradas por módulo. Cada módulo separa los casos correctos de los casos de error (validaciones y conflictos), y cada request indica el código de estado que espera.\n\nSe puede correr completa con el Runner, en orden: crea registros de prueba y al final borra lo que creó.\n\nAntes: levantar la API (npm run start:dev) con la base cargada (npx prisma migrate dev y npm run prisma:seed).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -52,10 +52,11 @@
   ],
   "item": [
     {
-      "name": "App",
+      "name": "00 · Estado de la API",
+      "description": "Comprueba que la API esté levantada y responda.",
       "item": [
         {
-          "name": "Estado de la API",
+          "name": "Estado de la API → 200",
           "event": [
             {
               "listen": "test",
@@ -83,1396 +84,1474 @@
       ]
     },
     {
-      "name": "Auth (TP 12)",
-      "description": "Registro e inicio de sesion con JWT. Cada corrida registra un usuario con un email nuevo (no hay ruta para borrar usuarios: quedan en la base de prueba). El login guarda el token en la variable token.",
+      "name": "01 · Autenticación",
+      "description": "Registro e inicio de sesión con JWT. Cada corrida registra un usuario con un email nuevo (no hay ruta para borrar usuarios: quedan en la base). El login guarda el token en la variable token.",
       "item": [
         {
-          "name": "Registrar",
-          "event": [
+          "name": "Casos correctos",
+          "description": "Registra un usuario nuevo e inicia sesión con él.",
+          "item": [
             {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Email nuevo en cada corrida, para que el registro no choque con uno anterior",
-                  "pm.collectionVariables.set(\"emailPrueba\", `prueba.${Date.now()}@example.com`);",
-                  "pm.collectionVariables.set(\"passwordPrueba\", \"Prueba1234\");"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "const usuario = pm.response.json();",
-                  "pm.test(\"Devuelve el usuario sin la contrasena\", () => {",
-                  "  pm.expect(usuario.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
-                  "  pm.expect(usuario).to.not.have.property(\"password\");",
-                  "  pm.expect(usuario).to.not.have.property(\"passwordHash\");",
-                  "});",
-                  "pm.test(\"Queda con rol recepcion\", () => pm.expect(usuario.rol).to.eql(\"recepcion\"));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"usuarioId\", usuario.id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Registrar - email repetido",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Registrar - invalido",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Explica cada campo invalido\", () => {",
-                  "  const mensajes = pm.response.json().message.join(\" \");",
-                  "  pm.expect(mensajes).to.include(\"email\");",
-                  "  pm.expect(mensajes).to.include(\"password\");",
-                  "  pm.expect(mensajes).to.include(\"nombre\");",
-                  "});"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "register"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
-                  "const datos = pm.response.json();",
-                  "pm.test(\"Devuelve un JWT\", () => pm.expect(datos.access_token.split(\".\")).to.have.lengthOf(3));",
-                  "pm.test(\"El token es del usuario que entro\", () => {",
-                  "  const parte = datos.access_token.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\");",
-                  "  const payload = JSON.parse(CryptoJS.enc.Base64.parse(parte).toString(CryptoJS.enc.Utf8));",
-                  "  pm.expect(payload.sub).to.eql(pm.collectionVariables.get(\"usuarioId\"));",
-                  "  pm.expect(payload.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
-                  "});",
-                  "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", datos.access_token);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Login - contrasena incorrecta",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
-                  "pm.test(\"No devuelve token\", () => pm.expect(pm.response.json()).to.not.have.property(\"access_token\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"otraContrasena\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Login - email no registrado",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
-                  "pm.test(\"Mismo mensaje que con la contrasena incorrecta\", () => pm.expect(pm.response.json().message).to.eql(\"Email o contrasena incorrectos\"));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"nadie.registrado@example.com\",\n  \"password\": \"Prueba1234\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "login"
-              ]
-            },
-            "description": ""
-          }
-        }
-      ]
-    },
-    {
-      "name": "Obras sociales",
-      "item": [
-        {
-          "name": "Listar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Obtener por id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales",
-                "1"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"obraSocialId\", pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Obra social de prueba {{$timestamp}}\",\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"activa\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear - invalido (TP 10)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"\",\n  \"activa\": \"si\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales"
-              ]
-            },
-            "description": "Nombre vacio y activa distinto de true/false: tiene que responder 400."
-          }
-        },
-        {
-          "name": "Actualizar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"activa\": false\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales",
-                "{{obraSocialId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Eliminar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "obras-sociales",
-                "{{obraSocialId}}"
-              ]
-            },
-            "description": ""
-          }
-        }
-      ]
-    },
-    {
-      "name": "Tipos de muestra",
-      "item": [
-        {
-          "name": "Listar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Obtener por id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra",
-                "1"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"tipoMuestraId\", pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Hisopado {{$timestamp}}\",\n  \"tubo\": \"Tubo con medio de transporte\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear - invalido (TP 10)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tubo\": 123\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra"
-              ]
-            },
-            "description": "Falta el nombre y tubo no es texto: tiene que responder 400."
-          }
-        },
-        {
-          "name": "Actualizar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tubo\": \"Tubo esteril\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra",
-                "{{tipoMuestraId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Eliminar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "tipos-muestra",
-                "{{tipoMuestraId}}"
-              ]
-            },
-            "description": ""
-          }
-        }
-      ]
-    },
-    {
-      "name": "Analisis",
-      "item": [
-        {
-          "name": "Listar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/analisis",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Obtener por id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/analisis/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis",
-                "1"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"analisisId\", pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"nombre\": \"Analisis de prueba\",\n  \"tipoMuestraId\": 2,\n  \"unidad\": \"mg/dL\",\n  \"valorRefMin\": 10,\n  \"valorRefMax\": 50,\n  \"diasDemora\": 1,\n  \"activo\": true,\n  \"ub\": 3\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/analisis",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear - invalido (TP 10)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"minusculas\",\n  \"nombre\": \"Sin tipo de muestra\",\n  \"tipoMuestraId\": \"dos\",\n  \"activo\": \"si\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/analisis",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis"
-              ]
-            },
-            "description": "Codigo en minusculas, texto donde va un numero y activo distinto de true/false: tiene que responder 400."
-          }
-        },
-        {
-          "name": "Actualizar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"diasDemora\": 2\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/analisis/{{analisisId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis",
-                "{{analisisId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Eliminar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/analisis/{{analisisId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "analisis",
-                "{{analisisId}}"
-              ]
-            },
-            "description": ""
-          }
-        }
-      ]
-    },
-    {
-      "name": "Pacientes",
-      "item": [
-        {
-          "name": "Listar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pacientes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.collectionVariables.set(\"dniPrueba\", String(Math.floor(30000000 + Math.random() * 9999999)));"
-                ]
-              }
-            },
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"pacienteId\", pm.response.json().id);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Paciente\",\n  \"apellido\": \"De Prueba\",\n  \"fechaNacimiento\": \"1990-05-20\",\n  \"sexo\": \"F\",\n  \"telefono\": \"3815550000\",\n  \"email\": \"paciente.prueba@example.com\",\n  \"obraSocialId\": 1,\n  \"nroAfiliado\": \"123456\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/pacientes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Obtener por id",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes",
-                "{{pacienteId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear - invalido (TP 10)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"abc\",\n  \"nombre\": \"\",\n  \"fechaNacimiento\": \"20/05/1990\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/pacientes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes"
-              ]
-            },
-            "description": "DNI con letras, nombre vacio, falta el apellido y la fecha tiene otro formato: tiene que responder 400."
-          }
-        },
-        {
-          "name": "Crear - DNI repetido",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Otro\",\n  \"apellido\": \"Paciente\",\n  \"fechaNacimiento\": \"1990-05-20\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/pacientes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes"
-              ]
-            },
-            "description": "Mismo DNI que el paciente creado antes: tiene que responder 409."
-          }
-        },
-        {
-          "name": "Actualizar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"telefono\": \"3815551111\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "pacientes",
-                "{{pacienteId}}"
-              ]
-            },
-            "description": ""
-          }
-        }
-      ]
-    },
-    {
-      "name": "Ordenes",
-      "item": [
-        {
-          "name": "Listar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/ordenes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Listar por estado",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/ordenes?estado=abierta",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes"
-              ],
-              "query": [
+              "name": "Registrar usuario → 201",
+              "event": [
                 {
-                  "key": "estado",
-                  "value": "abierta"
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Email nuevo en cada corrida, para que el registro no choque con uno anterior",
+                      "pm.collectionVariables.set(\"emailPrueba\", `prueba.${Date.now()}@example.com`);",
+                      "pm.collectionVariables.set(\"passwordPrueba\", \"Prueba1234\");"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "const usuario = pm.response.json();",
+                      "pm.test(\"Devuelve el usuario sin la contrasena\", () => {",
+                      "  pm.expect(usuario.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
+                      "  pm.expect(usuario).to.not.have.property(\"password\");",
+                      "  pm.expect(usuario).to.not.have.property(\"passwordHash\");",
+                      "});",
+                      "pm.test(\"Queda con rol recepcion\", () => pm.expect(usuario.rol).to.eql(\"recepcion\"));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"usuarioId\", usuario.id);"
+                    ]
+                  }
                 }
-              ]
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": ""
+              }
             },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear",
-          "event": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
-                  "if (pm.response.code === 201) pm.collectionVariables.set(\"ordenId\", pm.response.json().id);",
-                  "pm.test(\"Tiene numero de orden\", () => pm.expect(pm.response.json().nroOrden).to.match(/^ORD-\\d{4}-\\d{6}$/));"
-                ]
+              "name": "Iniciar sesión → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                      "const datos = pm.response.json();",
+                      "pm.test(\"Devuelve un JWT\", () => pm.expect(datos.access_token.split(\".\")).to.have.lengthOf(3));",
+                      "pm.test(\"El token es del usuario que entro\", () => {",
+                      "  const parte = datos.access_token.split(\".\")[1].replace(/-/g, \"+\").replace(/_/g, \"/\");",
+                      "  const payload = JSON.parse(CryptoJS.enc.Base64.parse(parte).toString(CryptoJS.enc.Utf8));",
+                      "  pm.expect(payload.sub).to.eql(pm.collectionVariables.get(\"usuarioId\"));",
+                      "  pm.expect(payload.email).to.eql(pm.collectionVariables.get(\"emailPrueba\"));",
+                      "});",
+                      "if (pm.response.code === 200) pm.collectionVariables.set(\"token\", datos.access_token);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": ""
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pacienteId\": \"{{pacienteId}}\",\n  \"fechaOrden\": \"2026-11-17\",\n  \"observaciones\": \"Orden creada desde Postman\",\n  \"analisisIds\": [\n    1,\n    2,\n    3\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ordenes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes"
-              ]
-            },
-            "description": ""
-          }
+          ]
         },
         {
-          "name": "Obtener por id",
-          "event": [
+          "name": "Casos de error",
+          "description": "Datos inválidos, email repetido y credenciales incorrectas.",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
+              "name": "Registrar con email repetido → 409",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Usuario\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"{{passwordPrueba}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Registrar con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Explica cada campo invalido\", () => {",
+                      "  const mensajes = pm.response.json().message.join(\" \");",
+                      "  pm.expect(mensajes).to.include(\"email\");",
+                      "  pm.expect(mensajes).to.include(\"password\");",
+                      "  pm.expect(mensajes).to.include(\"nombre\");",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"\",\n  \"apellido\": \"De Prueba\",\n  \"email\": \"no-es-un-email\",\n  \"password\": \"123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Login con contraseña incorrecta → 401",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                      "pm.test(\"No devuelve token\", () => pm.expect(pm.response.json()).to.not.have.property(\"access_token\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{emailPrueba}}\",\n  \"password\": \"otraContrasena\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Login con email no registrado → 401",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 401\", () => pm.response.to.have.status(401));",
+                      "pm.test(\"Mismo mensaje que con la contrasena incorrecta\", () => pm.expect(pm.response.json().message).to.eql(\"Email o contrasena incorrectos\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nadie.registrado@example.com\",\n  \"password\": \"Prueba1234\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": ""
               }
             }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes",
-                "{{ordenId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Crear - invalido (TP 10)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"pacienteId\": \"no-es-uuid\",\n  \"analisisIds\": []\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ordenes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes"
-              ]
-            },
-            "description": "pacienteId que no es UUID y sin analisis: tiene que responder 400."
-          }
-        },
-        {
-          "name": "Actualizar estudios",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Quedan 2 estudios\", () => pm.expect(pm.response.json().items.length).to.eql(2));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"analisisIds\": [\n    4,\n    5\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes",
-                "{{ordenId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Anular",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"estado\": \"anulada\",\n  \"motivoAnulacion\": \"Prueba desde Postman\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes",
-                "{{ordenId}}"
-              ]
-            },
-            "description": ""
-          }
-        },
-        {
-          "name": "Eliminar",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "ordenes",
-                "{{ordenId}}"
-              ]
-            },
-            "description": ""
-          }
+          ]
         }
       ]
     },
     {
-      "name": "Limpieza",
+      "name": "02 · Obras sociales",
+      "description": "Alta, baja, modificación y consulta de obras sociales.",
       "item": [
         {
-          "name": "Eliminar el paciente de prueba",
+          "name": "Casos correctos",
+          "description": "Crea una obra social de prueba, la modifica y la elimina.",
+          "item": [
+            {
+              "name": "Listar obras sociales → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Obtener obra social por id → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales",
+                    "1"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Crear obra social → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"obraSocialId\", pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Obra social de prueba {{$timestamp}}\",\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"activa\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Actualizar obra social → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"activa\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales",
+                    "{{obraSocialId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Eliminar obra social → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales/{{obraSocialId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales",
+                    "{{obraSocialId}}"
+                  ]
+                },
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de error",
+          "description": "Validación de los datos de entrada.",
+          "item": [
+            {
+              "name": "Crear con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"\",\n  \"activa\": \"si\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/obras-sociales",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "obras-sociales"
+                  ]
+                },
+                "description": "Nombre vacio y activa distinto de true/false: tiene que responder 400."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · Tipos de muestra",
+      "description": "Alta, baja, modificación y consulta de tipos de muestra.",
+      "item": [
+        {
+          "name": "Casos correctos",
+          "description": "Crea un tipo de muestra de prueba, lo modifica y lo elimina.",
+          "item": [
+            {
+              "name": "Listar tipos de muestra → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Obtener tipo de muestra por id → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra",
+                    "1"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Crear tipo de muestra → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"tipoMuestraId\", pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombre\": \"Hisopado {{$timestamp}}\",\n  \"tubo\": \"Tubo con medio de transporte\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Actualizar tipo de muestra → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tubo\": \"Tubo esteril\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra",
+                    "{{tipoMuestraId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Eliminar tipo de muestra → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra/{{tipoMuestraId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra",
+                    "{{tipoMuestraId}}"
+                  ]
+                },
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de error",
+          "description": "Validación de los datos de entrada.",
+          "item": [
+            {
+              "name": "Crear con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tubo\": 123\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/tipos-muestra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "tipos-muestra"
+                  ]
+                },
+                "description": "Falta el nombre y tubo no es texto: tiene que responder 400."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Análisis",
+      "description": "Alta, baja, modificación y consulta del catálogo de análisis.",
+      "item": [
+        {
+          "name": "Casos correctos",
+          "description": "Crea un análisis de prueba, lo modifica y lo elimina.",
+          "item": [
+            {
+              "name": "Listar análisis → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/analisis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Obtener análisis por id → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/analisis/1",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis",
+                    "1"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Crear análisis → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"analisisId\", pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"PRU{{$timestamp}}\",\n  \"nombre\": \"Analisis de prueba\",\n  \"tipoMuestraId\": 2,\n  \"unidad\": \"mg/dL\",\n  \"valorRefMin\": 10,\n  \"valorRefMax\": 50,\n  \"diasDemora\": 1,\n  \"activo\": true,\n  \"ub\": 3\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/analisis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Actualizar análisis → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"diasDemora\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/analisis/{{analisisId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis",
+                    "{{analisisId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Eliminar análisis → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/analisis/{{analisisId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis",
+                    "{{analisisId}}"
+                  ]
+                },
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de error",
+          "description": "Validación de los datos de entrada.",
+          "item": [
+            {
+              "name": "Crear con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"codigo\": \"minusculas\",\n  \"nombre\": \"Sin tipo de muestra\",\n  \"tipoMuestraId\": \"dos\",\n  \"activo\": \"si\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/analisis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "analisis"
+                  ]
+                },
+                "description": "Codigo en minusculas, texto donde va un numero y activo distinto de true/false: tiene que responder 400."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · Pacientes",
+      "description": "Alta, modificación y consulta de pacientes. El paciente de prueba se usa en Órdenes y se borra en Limpieza.",
+      "item": [
+        {
+          "name": "Casos correctos",
+          "description": "Crea un paciente de prueba con un DNI nuevo y lo modifica.",
+          "item": [
+            {
+              "name": "Listar pacientes → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Crear paciente → 201",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set(\"dniPrueba\", String(Math.floor(30000000 + Math.random() * 9999999)));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"pacienteId\", pm.response.json().id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Paciente\",\n  \"apellido\": \"De Prueba\",\n  \"fechaNacimiento\": \"1990-05-20\",\n  \"sexo\": \"F\",\n  \"telefono\": \"3815550000\",\n  \"email\": \"paciente.prueba@example.com\",\n  \"obraSocialId\": 1,\n  \"nroAfiliado\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Obtener paciente por id → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes",
+                    "{{pacienteId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Actualizar paciente → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"telefono\": \"3815551111\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes/{{pacienteId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes",
+                    "{{pacienteId}}"
+                  ]
+                },
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de error",
+          "description": "Validación de los datos de entrada y DNI duplicado.",
+          "item": [
+            {
+              "name": "Crear con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"abc\",\n  \"nombre\": \"\",\n  \"fechaNacimiento\": \"20/05/1990\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes"
+                  ]
+                },
+                "description": "DNI con letras, nombre vacio, falta el apellido y la fecha tiene otro formato: tiene que responder 400."
+              }
+            },
+            {
+              "name": "Crear con DNI repetido → 409",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 409\", () => pm.response.to.have.status(409));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"dni\": \"{{dniPrueba}}\",\n  \"nombre\": \"Otro\",\n  \"apellido\": \"Paciente\",\n  \"fechaNacimiento\": \"1990-05-20\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/pacientes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "pacientes"
+                  ]
+                },
+                "description": "Mismo DNI que el paciente creado antes: tiene que responder 409."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · Órdenes",
+      "description": "Órdenes de análisis del paciente de prueba: alta con número automático, cambio de estudios, anulación y baja.",
+      "item": [
+        {
+          "name": "Casos correctos",
+          "description": "Crea una orden para el paciente de prueba, cambia sus estudios, la anula y la elimina.",
+          "item": [
+            {
+              "name": "Listar órdenes → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Filtrar órdenes por estado → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes?estado=abierta",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ],
+                  "query": [
+                    {
+                      "key": "estado",
+                      "value": "abierta"
+                    }
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Crear orden → 201",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 201\", () => pm.response.to.have.status(201));",
+                      "if (pm.response.code === 201) pm.collectionVariables.set(\"ordenId\", pm.response.json().id);",
+                      "pm.test(\"Tiene numero de orden\", () => pm.expect(pm.response.json().nroOrden).to.match(/^ORD-\\d{4}-\\d{6}$/));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pacienteId\": \"{{pacienteId}}\",\n  \"fechaOrden\": \"2026-11-17\",\n  \"observaciones\": \"Orden creada desde Postman\",\n  \"analisisIds\": [\n    1,\n    2,\n    3\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Obtener orden por id → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "{{ordenId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Cambiar los estudios de la orden → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));",
+                      "pm.test(\"Quedan 2 estudios\", () => pm.expect(pm.response.json().items.length).to.eql(2));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"analisisIds\": [\n    4,\n    5\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "{{ordenId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Anular orden → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"estado\": \"anulada\",\n  \"motivoAnulacion\": \"Prueba desde Postman\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "{{ordenId}}"
+                  ]
+                },
+                "description": ""
+              }
+            },
+            {
+              "name": "Eliminar orden → 200",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 200\", () => pm.response.to.have.status(200));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes/{{ordenId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes",
+                    "{{ordenId}}"
+                  ]
+                },
+                "description": ""
+              }
+            }
+          ]
+        },
+        {
+          "name": "Casos de error",
+          "description": "Validación de los datos de entrada.",
+          "item": [
+            {
+              "name": "Crear con datos inválidos → 400",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Responde 400\", () => pm.response.to.have.status(400));",
+                      "pm.test(\"Devuelve los mensajes de validacion\", () => pm.expect(pm.response.json().message).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"pacienteId\": \"no-es-uuid\",\n  \"analisisIds\": []\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ordenes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "ordenes"
+                  ]
+                },
+                "description": "pacienteId que no es UUID y sin analisis: tiene que responder 400."
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "99 · Limpieza",
+      "description": "Borra el paciente de prueba. Va al final porque Órdenes lo usa.",
+      "item": [
+        {
+          "name": "Eliminar el paciente de prueba → 200",
           "event": [
             {
               "listen": "test",
